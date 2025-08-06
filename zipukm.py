@@ -145,6 +145,11 @@ def create_catalog_page(products, page=0, per_page=7):
     if nav:
         buttons.append(nav)
 
+    # Добавляем кнопку "🔍 Поиск" внизу
+    buttons.append([
+        InlineKeyboardButton(text="🔍 Поиск", callback_data="search")
+    ])
+
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 # Установка команды /start
@@ -161,19 +166,18 @@ async def cmd_start(message: types.Message):
 # Показ каталога
 @dp.callback_query(lambda c: c.data == "catalog")
 async def show_catalog(callback: types.CallbackQuery):
-    await callback.answer()  # ✅ Снимаем "часы"
+    await callback.answer()
     products = load_products()
     if not products:
         await callback.message.answer("Товары временно отсутствуют.", reply_markup=get_main_menu())
         return
-
     keyboard = create_catalog_page(products)
     await callback.message.answer("Выберите товар:", reply_markup=keyboard)
 
 # Навигация по каталогу
 @dp.callback_query(lambda c: c.data.startswith("catalog_prev_") or c.data.startswith("catalog_next_"))
 async def handle_catalog_navigation(callback: types.CallbackQuery):
-    await callback.answer()  # ✅
+    await callback.answer()
     action = "prev" if "prev" in callback.data else "next"
     current_page = int(callback.data.split("_")[-1])
     page = current_page - 1 if action == "prev" else current_page + 1
@@ -184,7 +188,7 @@ async def handle_catalog_navigation(callback: types.CallbackQuery):
 # Возврат к каталогу
 @dp.callback_query(lambda c: c.data == "back_to_catalog")
 async def back_to_catalog(callback: types.CallbackQuery):
-    await callback.answer()  # ✅
+    await callback.answer()
     products = load_products()
     keyboard = create_catalog_page(products)
     await callback.message.answer("Выберите товар:", reply_markup=keyboard)
@@ -192,14 +196,13 @@ async def back_to_catalog(callback: types.CallbackQuery):
 # Возврат на главную
 @dp.callback_query(lambda c: c.data == "back_to_main")
 async def back_to_main(callback: types.CallbackQuery):
-    await callback.answer()  # ✅
+    await callback.answer()
     await callback.message.answer(WELCOME_TEXT, reply_markup=get_main_menu(), parse_mode="HTML")
 
 # Показ товара (с статусом загрузки)
 @dp.callback_query(lambda c: c.data.startswith("product_"))
 async def handle_product_selection(callback: types.CallbackQuery):
-    await callback.answer()  # ✅ Снимаем "часы"
-
+    await callback.answer()
     try:
         product_id = int(callback.data.split("_")[1])
     except (ValueError, IndexError):
@@ -212,12 +215,7 @@ async def handle_product_selection(callback: types.CallbackQuery):
         await callback.message.answer("Товар не найден.")
         return
 
-    # Сохраняем для "доп. фото"
     user_current_product[callback.from_user.id] = selected_product
-
-    # Статус загрузки
-    status_msg = await callback.message.answer("⏳ Минуту, загружаем информацию...")
-
     photo_paths = get_photo_paths(selected_product)
     first_photo_path = photo_paths[0] if photo_paths else None
 
@@ -230,7 +228,6 @@ async def handle_product_selection(callback: types.CallbackQuery):
         f"📄 <b>Описание:</b> {selected_product.get('description', 'Нет описания')}"
     )
 
-    # Кнопки
     buttons = [
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_catalog")]
     ]
@@ -243,7 +240,6 @@ async def handle_product_selection(callback: types.CallbackQuery):
     ])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-    # Отправляем фото и описание (не удаляем старое сообщение!)
     if first_photo_path:
         await callback.message.answer_photo(
             photo=types.FSInputFile(first_photo_path),
@@ -254,25 +250,17 @@ async def handle_product_selection(callback: types.CallbackQuery):
     else:
         await callback.message.answer(text, reply_markup=keyboard, parse_mode="HTML")
 
-    # Удаляем статус
-    try:
-        await status_msg.delete()
-    except:
-        pass
-
 # Показ дополнительных фото
 @dp.callback_query(lambda c: c.data == "more_photos")
 async def show_more_photos(callback: types.CallbackQuery):
-    await callback.answer()  # ✅ Снимаем "часы"
+    await callback.answer()
     product = user_current_product.get(callback.from_user.id)
     if not product:
         await callback.message.answer("Ошибка: товар не найден.")
         return
 
-    # Статус загрузки
     status_msg = await callback.message.answer("🖼 Минуту, загружаем фото...")
-
-    photo_paths = get_photo_paths(product)[1:]  # все кроме первого
+    photo_paths = get_photo_paths(product)[1:]
     if not photo_paths:
         await callback.message.answer("Нет дополнительных фото.")
         try:
@@ -299,14 +287,11 @@ async def show_more_photos(callback: types.CallbackQuery):
 # Связаться
 @dp.callback_query(lambda c: c.data == "contact")
 async def handle_contact(callback: types.CallbackQuery):
-    await callback.answer()  # ✅
+    await callback.answer()
     contact_info = (
         f"📞 <b>Контактное лицо:</b> {CONTACT_NAME}\n"
         f"📱 <b>Телефон:</b> <a href='tel:{CONTACT_PHONE}'>{CONTACT_PHONE}</a>\n"
-        
-        # на данный момент почта не корректная. Заменить в .env
-        #f"✉️ <b>Email:</b> <a href='mailto:{CONTACT_EMAIL}'>{CONTACT_EMAIL}</a>\n"
-        
+        f"✉️ <b>Email:</b> <a href='mailto:{CONTACT_EMAIL}'>{CONTACT_EMAIL}</a>\n"
         f"📍 <b>Место:</b> {CONTACT_LOCATION}\n"
         f"🕒 <b>График:</b> Пн–Пт, 8:30–17:30"
     )
@@ -316,19 +301,49 @@ async def handle_contact(callback: types.CallbackQuery):
     ])
     await callback.message.answer(contact_info, reply_markup=keyboard, parse_mode="HTML")
 
-# Поиск
+# Поиск: через кнопку
 @dp.callback_query(lambda c: c.data == "search")
 async def start_search(callback: types.CallbackQuery, state: FSMContext):
-    await callback.answer()  # ✅
+    await callback.answer()
     await callback.message.answer("Введите часть названия товара (например, УРАЛ, 4320, Камаз):")
     await state.set_state(SearchState.waiting_for_query)
 
+# Поиск: через любой текст
+@dp.message()
+async def handle_text_message(message: types.Message, state: FSMContext):
+    user_input = message.text.strip().lower()
+    if not user_input:
+        return
+
+    # Проверяем, не в состоянии ли пользователь ввода запроса
+    current_state = await state.get_state()
+    if current_state == SearchState.waiting_for_query:
+        await handle_search_query(message, state)
+        return
+
+    # Ищем совпадение по названию
+    products = load_products()
+    matches = [
+        p for p in products
+        if user_input in p.get('name', '').lower() or
+           user_input in p.get('where', '').lower() or
+           user_input in p.get('status', '').lower()
+    ]
+
+    if matches:
+        keyboard = create_catalog_page(matches, per_page=10)
+        await message.answer(f"Найдено {len(matches)} результатов:", reply_markup=keyboard)
+    else:
+        await message.answer("Извините, эта команда или запрос не поддерживается. Воспользуйтесь кнопками ниже.", reply_markup=get_main_menu())
+
+# Обработчик ввода при состоянии поиска
 @dp.message(StateFilter(SearchState.waiting_for_query))
 async def handle_search_query(message: types.Message, state: FSMContext):
     query = message.text.strip().lower()
     if not query:
         await message.answer("Введите корректный запрос.")
         return
+
     products = load_products()
     matches = [
         p for p in products
@@ -336,12 +351,13 @@ async def handle_search_query(message: types.Message, state: FSMContext):
            query in p.get('where', '').lower() or
            query in p.get('status', '').lower()
     ]
+
     if not matches:
         await message.answer(f"Ничего не найдено по запросу: *{query}*", reply_markup=get_main_menu(), parse_mode="Markdown")
-        await state.clear()
-        return
-    keyboard = create_catalog_page(matches, per_page=10)
-    await message.answer(f"Найдено {len(matches)} результатов:", reply_markup=keyboard)
+    else:
+        keyboard = create_catalog_page(matches, per_page=10)
+        await message.answer(f"Найдено {len(matches)} результатов:", reply_markup=keyboard)
+
     await state.clear()
 
 # Запуск
