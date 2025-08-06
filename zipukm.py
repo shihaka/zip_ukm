@@ -303,7 +303,10 @@ async def handle_contact(callback: types.CallbackQuery):
     contact_info = (
         f"📞 <b>Контактное лицо:</b> {CONTACT_NAME}\n"
         f"📱 <b>Телефон:</b> <a href='tel:{CONTACT_PHONE}'>{CONTACT_PHONE}</a>\n"
-        # f"✉️ <b>Email:</b> <a href='mailto:{CONTACT_EMAIL}'>{CONTACT_EMAIL}</a>\n"
+        
+        # на данный момент почта не корректная. Заменить в .env
+        #f"✉️ <b>Email:</b> <a href='mailto:{CONTACT_EMAIL}'>{CONTACT_EMAIL}</a>\n"
+        
         f"📍 <b>Место:</b> {CONTACT_LOCATION}\n"
         f"🕒 <b>График:</b> Пн–Пт, 8:30–17:30"
     )
