@@ -291,12 +291,12 @@ async def handle_contact(callback: types.CallbackQuery):
     contact_info = (
         f"📞 <b>Контактное лицо:</b> {CONTACT_NAME}\n"
         f"📱 <b>Телефон:</b> <a href='tel:{CONTACT_PHONE}'>{CONTACT_PHONE}</a>\n"
-        f"✉️ <b>Email:</b> <a href='mailto:{CONTACT_EMAIL}'>{CONTACT_EMAIL}</a>\n"
+        # f"✉️ <b>Email:</b> <a href='mailto:{CONTACT_EMAIL}'>{CONTACT_EMAIL}</a>\n"
         f"📍 <b>Место:</b> {CONTACT_LOCATION}\n"
         f"🕒 <b>График:</b> Пн–Пт, 8:30–17:30"
     )
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💬 Написать в Telegram", url="https://t.me/shihaleevka")],
+        [InlineKeyboardButton(text="💬 Написать в Telegram", url="https://t.me/kredzzz47")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_main")]
     ])
     await callback.message.answer(contact_info, reply_markup=keyboard, parse_mode="HTML")
