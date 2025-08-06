@@ -161,71 +161,55 @@ async def cmd_start(message: types.Message):
 # Показ каталога
 @dp.callback_query(lambda c: c.data == "catalog")
 async def show_catalog(callback: types.CallbackQuery):
+    await callback.answer()  # ✅ Снимаем "часы"
     products = load_products()
     if not products:
         await callback.message.answer("Товары временно отсутствуют.", reply_markup=get_main_menu())
-        await callback.answer()
         return
 
     keyboard = create_catalog_page(products)
-    try:
-        await callback.message.edit_text("Выберите товар:", reply_markup=keyboard)
-    except:
-        await callback.message.delete()
-        await callback.message.answer("Выберите товар:", reply_markup=keyboard)
-    await callback.answer()
+    await callback.message.answer("Выберите товар:", reply_markup=keyboard)
 
 # Навигация по каталогу
 @dp.callback_query(lambda c: c.data.startswith("catalog_prev_") or c.data.startswith("catalog_next_"))
 async def handle_catalog_navigation(callback: types.CallbackQuery):
+    await callback.answer()  # ✅
     action = "prev" if "prev" in callback.data else "next"
     current_page = int(callback.data.split("_")[-1])
     page = current_page - 1 if action == "prev" else current_page + 1
     products = load_products()
     keyboard = create_catalog_page(products, page=page)
-    try:
-        await callback.message.edit_reply_markup(reply_markup=keyboard)
-    except:
-        await callback.message.delete()
-        await callback.message.answer("Выберите товар:", reply_markup=keyboard)
-    await callback.answer()
+    await callback.message.answer("Выберите товар:", reply_markup=keyboard)
 
 # Возврат к каталогу
 @dp.callback_query(lambda c: c.data == "back_to_catalog")
 async def back_to_catalog(callback: types.CallbackQuery):
+    await callback.answer()  # ✅
     products = load_products()
     keyboard = create_catalog_page(products)
-    try:
-        await callback.message.delete()
-    except:
-        pass
     await callback.message.answer("Выберите товар:", reply_markup=keyboard)
-    await callback.answer()
 
 # Возврат на главную
 @dp.callback_query(lambda c: c.data == "back_to_main")
 async def back_to_main(callback: types.CallbackQuery):
-    try:
-        await callback.message.delete()
-    except:
-        pass
+    await callback.answer()  # ✅
     await callback.message.answer(WELCOME_TEXT, reply_markup=get_main_menu(), parse_mode="HTML")
-    await callback.answer()
 
 # Показ товара (с статусом загрузки)
 @dp.callback_query(lambda c: c.data.startswith("product_"))
 async def handle_product_selection(callback: types.CallbackQuery):
+    await callback.answer()  # ✅ Снимаем "часы"
+
     try:
         product_id = int(callback.data.split("_")[1])
     except (ValueError, IndexError):
-        await callback.answer("Товар не найден")
+        await callback.message.answer("Товар не найден.")
         return
 
     products = load_products()
     selected_product = next((p for p in products if str(get_product_id(p)) == str(product_id)), None)
     if not selected_product:
-        await callback.message.edit_text("Товар не найден.")
-        await callback.answer()
+        await callback.message.answer("Товар не найден.")
         return
 
     # Сохраняем для "доп. фото"
@@ -259,7 +243,7 @@ async def handle_product_selection(callback: types.CallbackQuery):
     ])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-    # Отправляем фото и описание
+    # Отправляем фото и описание (не удаляем старое сообщение!)
     if first_photo_path:
         await callback.message.answer_photo(
             photo=types.FSInputFile(first_photo_path),
@@ -276,14 +260,13 @@ async def handle_product_selection(callback: types.CallbackQuery):
     except:
         pass
 
-    await callback.answer()
-
 # Показ дополнительных фото
 @dp.callback_query(lambda c: c.data == "more_photos")
 async def show_more_photos(callback: types.CallbackQuery):
+    await callback.answer()  # ✅ Снимаем "часы"
     product = user_current_product.get(callback.from_user.id)
     if not product:
-        await callback.answer("Товар не найден.")
+        await callback.message.answer("Ошибка: товар не найден.")
         return
 
     # Статус загрузки
@@ -291,12 +274,11 @@ async def show_more_photos(callback: types.CallbackQuery):
 
     photo_paths = get_photo_paths(product)[1:]  # все кроме первого
     if not photo_paths:
-        await callback.answer("Нет дополнительных фото.")
+        await callback.message.answer("Нет дополнительных фото.")
         try:
             await status_msg.delete()
         except:
             pass
-        await callback.answer()
         return
 
     album = MediaGroupBuilder()
@@ -314,15 +296,14 @@ async def show_more_photos(callback: types.CallbackQuery):
     except:
         pass
 
-    await callback.answer()
-
 # Связаться
 @dp.callback_query(lambda c: c.data == "contact")
 async def handle_contact(callback: types.CallbackQuery):
+    await callback.answer()  # ✅
     contact_info = (
         f"📞 <b>Контактное лицо:</b> {CONTACT_NAME}\n"
         f"📱 <b>Телефон:</b> <a href='tel:{CONTACT_PHONE}'>{CONTACT_PHONE}</a>\n"
-        f"✉️ <b>Email:</b> <a href='mailto:{CONTACT_EMAIL}'>{CONTACT_EMAIL}</a>\n"
+        # f"✉️ <b>Email:</b> <a href='mailto:{CONTACT_EMAIL}'>{CONTACT_EMAIL}</a>\n"
         f"📍 <b>Место:</b> {CONTACT_LOCATION}\n"
         f"🕒 <b>График:</b> Пн–Пт, 8:30–17:30"
     )
@@ -330,23 +311,14 @@ async def handle_contact(callback: types.CallbackQuery):
         [InlineKeyboardButton(text="💬 Написать в Telegram", url="https://t.me/shihaleevka")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_main")]
     ])
-    try:
-        await callback.message.delete()
-    except:
-        pass
     await callback.message.answer(contact_info, reply_markup=keyboard, parse_mode="HTML")
-    await callback.answer()
 
 # Поиск
 @dp.callback_query(lambda c: c.data == "search")
 async def start_search(callback: types.CallbackQuery, state: FSMContext):
-    try:
-        await callback.message.delete()
-    except:
-        pass
+    await callback.answer()  # ✅
     await callback.message.answer("Введите часть названия товара (например, УРАЛ, 4320, Камаз):")
     await state.set_state(SearchState.waiting_for_query)
-    await callback.answer()
 
 @dp.message(StateFilter(SearchState.waiting_for_query))
 async def handle_search_query(message: types.Message, state: FSMContext):
