@@ -1,6 +1,7 @@
 import os
 import asyncio
 import pandas as pd
+from aiohttp import web
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, BotCommand
@@ -360,9 +361,25 @@ async def handle_search_query(message: types.Message, state: FSMContext):
 
     await state.clear()
 
+async def _health(request):
+    return web.Response(text="OK")
+
+async def start_keepalive_server():
+    app = web.Application()
+    app.router.add_get("/", _health)
+    app.router.add_get("/health", _health)
+
+    # Replit выдаёт порт в переменной окружения PORT
+    port = int(os.getenv("PORT", 8000))
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
 # Запуск
 async def main():
     print("Бот запущен...")
+    await start_keepalive_server()
     await set_bot_commands(bot)
     await dp.start_polling(bot)
 
